@@ -21,8 +21,8 @@ class PylotonScraper:
 def main():
     config = configparser.ConfigParser(interpolation=None)
     config.read("./config/peloton.ini")
-    username = config.get('PeloJose', 'username')
-    password = config.get('PeloJose', 'password')
+    username = config.get('Peloton', 'username')
+    password = config.get('Peloton', 'password')
     scraper = PylotonScraper(username=username, password=password)
     scraper.connect_to_pyloton()
     return scraper.get_recent_workouts()
