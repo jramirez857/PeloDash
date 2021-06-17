@@ -1,5 +1,4 @@
 import pylotoncycle
-import peloton_parser
 import configparser
 
 class PylotonScraper:
