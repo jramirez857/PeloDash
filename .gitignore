@@ -129,4 +129,4 @@ dmypy.json
 .pyre/
 
 # ini credentials file
-./config/peloton.ini
+config/peloton.ini
