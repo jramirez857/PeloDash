@@ -14,10 +14,9 @@ class PylotonScraper:
     
     def get_recent_workouts(self) -> list:
         workouts = self.conn.GetRecentWorkouts(num_workouts=self.num_workouts)
-        print(workouts)
         return workouts
     
-def main():
+def main() -> list:
     config = configparser.ConfigParser(interpolation=None)
     config.read("./config/peloton.ini")
     username = config.get('Peloton', 'username')
