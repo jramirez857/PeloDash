@@ -130,3 +130,6 @@ dmypy.json
 
 # ini credentials file
 config/peloton.ini
+
+# IDE folders
+.vscode
