@@ -1,5 +1,5 @@
 import pylotoncycle
-import configparser
+import config_peloton as cfg
 
 class PylotonScraper:
     def __init__(self, username, password, num_workouts=10, **kwargs) -> None:
@@ -17,11 +17,7 @@ class PylotonScraper:
         return workouts
     
 def main() -> list:
-    config = configparser.ConfigParser(interpolation=None)
-    config.read("./config/peloton.ini")
-    username = config.get('Peloton', 'username')
-    password = config.get('Peloton', 'password')
-    scraper = PylotonScraper(username=username, password=password)
+    scraper = PylotonScraper(username=cfg.API_PELOTON_USERNAME, password=cfg.API_PELOTON_PASSWORD)
     scraper.connect_to_pyloton()
     return scraper.get_recent_workouts()
 
