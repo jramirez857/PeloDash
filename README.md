@@ -33,11 +33,11 @@ Install the project requirements using pip.
   
 ## Environment Variables
 
-To run this project, you will need to replace the following variables in config/Peloton.ini
+To run this project, you will need to replace the following variables in config_peloton.py
 
-`USERNAME=REPLACE_ME`
+`API_PELOTON_USERNAME`
 
-`PASSWORD=REPLACE_ME`
+`API_PELOTON_PASSWORD`
 
   
 ## Authors
