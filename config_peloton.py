@@ -1,0 +1,8 @@
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+# REPLACE WITH PELOTON USERNAME AND PASSWORD
+API_PELOTON_USERNAME = os.getenv("GT_API_PELOTON_USERNAME") or "REPLACE_ME"
+API_PELOTON_PASSWORD = os.getenv("GT_API_PELOTON_PASSWORD") or "REPLACE_ME"
