@@ -17,8 +17,10 @@ class WorkoutsInserter:
     def insert_workouts(self) -> None:
         for workout in WorkoutsInserter.get_workouts():
             workouts = self.db.workouts
-            workout_id = workouts.insert_one(workout).inserted_id
-            print(workout_id)
+            workout['_id'] = workout['id']
+            del workout['id']
+            workout_id = workouts.insert_one(workout)
+            print(f'Inserted workout with id: {workout_id}')
 
 def main() -> None:
     inserter = WorkoutsInserter(host='localhost', port=27017)
