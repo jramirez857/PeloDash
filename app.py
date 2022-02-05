@@ -299,47 +299,5 @@ def update_weekly_calories_burned_chart(start_date, end_date):
     line.update_xaxes(title="Week")
     return line
 
-
-
-
-def get_calories_burned_per_week_chart(start_date: datetime, end_date: datetime) -> px.scatter:
-    workout_df = df.loc[(df['Workout Timestamp'] >= start_date) & (df['Workout Timestamp'] <= end_date)]
-    for tz in ['EST', 'EDT', '-04', '-05']:
-        workout_df['Workout Timestamp']= workout_df['Workout Timestamp'].str.replace(f"\({tz}\)", '')
-    workout_df['Workout Timestamp'] = pd.to_datetime(workout_df['Workout Timestamp'], format='%Y-%m-%d %H:%M', errors='coerce')
-    
-    workout_df['Calories Burned'] = workout_df['Calories Burned'].fillna(0)
-    workout_df['Total Output'] = workout_df['Total Output'].fillna(0)
-    calories_df = workout_df.groupby(pd.Grouper(key='Workout Timestamp', freq='W'))['Calories Burned'].agg('sum').reset_index()
-    total_output_df = workout_df.groupby(pd.Grouper(key='Workout Timestamp', freq='W'))['Total Output'].agg('sum').reset_index()
-    line = make_subplots(specs=[[{"secondary_y": True}]])
-    ts = calories_df['Workout Timestamp'].to_list()
-    calories = calories_df['Calories Burned'].to_list()
-    total_output = total_output_df['Total Output'].to_list()
-    line.add_trace(go.Scatter(x=ts, y=calories,
-                                marker=dict(size=10, color='MediumPurple'),
-                                name='Total Calories'
-                            ),
-                            secondary_y=False
-    )
-    line.add_trace(go.Scatter(x=ts, y=total_output,
-                                marker=dict(size=10, color='MediumSeaGreen'),
-                                name='Total Output'
-                            ),
-                    secondary_y=True
-    )
-
-    line.update_layout(
-        title="Calories and Total Output per Week",
-        title_x=0.5,
-        xaxis_title="Week",
-        yaxis_title="Calories Burned",
-    )
-
-    line.update_yaxes(title_text="Total Output", secondary_y=True)
-    line.update_yaxes(title_text="Calories Burned", secondary_y=False)
-    line.update_xaxes(title="Week")
-    return line
-
 if __name__ == "__main__":
     app.run_server(debug=True)
