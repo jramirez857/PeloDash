@@ -1,20 +1,20 @@
 import os
 import logging
+import base64
+import io
 from dash import Dash, dcc, html
 import dash_bootstrap_components as dbc
+from dash.dependencies import Input, Output, State
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
-
+import datetime
+import dash_table
 
 
 assets_dir = "assets"
 img_dir = "img"
-
-df = pd.read_csv('workouts.csv')
-# Dropping any rows with missing values for Workout Length and Calories Burned
-df = df.dropna(axis=0, how='any', subset=['Length (minutes)', 'Calories Burned'])
 
 logging.basicConfig(
     filename='app.log', 
@@ -22,9 +22,9 @@ logging.basicConfig(
     level=logging.DEBUG
 )
 
-app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
-fav_instructor = df['Instructor Name'].mode()[0]
+app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP], suppress_callback_exceptions=True)
 
+df = pd.read_csv("/home/jose/VSCodeProjects/PeloDash/workouts.csv")
 
 def get_fitness_discipline_chart(workout_df: pd.DataFrame) -> px.scatter:
     pie = px.pie(
@@ -48,7 +48,8 @@ def get_instructors_by_discipline_chart(workout_df: pd.DataFrame) -> px.bar:
     )
     return chart
 
-def get_cycling_class_length_chart(workout_df: pd.DataFrame) -> px.scatter:
+def get_cycling_class_length_chart(start_date: datetime, end_time: datetime) -> px.scatter:
+    workout_df = df.loc[(df['Workout Timestamp'] >= start_date) & (df['Workout Timestamp'] <= end_time)]
     length_by_calories_df = workout_df.dropna(axis='rows', how='any', subset=['Length (minutes)']).reset_index(drop=True)
     length_by_calories_df = length_by_calories_df.loc[length_by_calories_df['Fitness Discipline'] == 'Cycling']
     bx= px.box(
@@ -63,46 +64,6 @@ def get_cycling_class_length_chart(workout_df: pd.DataFrame) -> px.scatter:
         title_x=0.5
     )
     return bx
-
-
-def get_calories_burned_per_week_chart(workout_df: pd.DataFrame) -> px.scatter:
-    for tz in ['EST', 'EDT', '-04', '-05']:
-        workout_df['Workout Timestamp']= workout_df['Workout Timestamp'].str.replace(f"\({tz}\)", '')
-    workout_df['Workout Timestamp'] = pd.to_datetime(workout_df['Workout Timestamp'], format='%Y-%m-%d %H:%M', errors='coerce')
-    
-    workout_df['Calories Burned'] = workout_df['Calories Burned'].fillna(0)
-    workout_df['Total Output'] = workout_df['Total Output'].fillna(0)
-    calories_df = workout_df.groupby(pd.Grouper(key='Workout Timestamp', freq='W'))['Calories Burned'].agg('sum').reset_index()
-    total_output_df = workout_df.groupby(pd.Grouper(key='Workout Timestamp', freq='W'))['Total Output'].agg('sum').reset_index()
-    line = make_subplots(specs=[[{"secondary_y": True}]])
-    ts = calories_df['Workout Timestamp'].to_list()
-    calories = calories_df['Calories Burned'].to_list()
-    total_output = total_output_df['Total Output'].to_list()
-    line.add_trace(go.Scatter(x=ts, y=calories,
-                                marker=dict(size=10, color='MediumPurple'),
-                                name='Total Calories'
-                            ),
-                            secondary_y=False
-    )
-    line.add_trace(go.Scatter(x=ts, y=total_output,
-                                marker=dict(size=10, color='MediumSeaGreen'),
-                                name='Total Output'
-                            ),
-                    secondary_y=True
-    )
-
-    line.update_layout(
-        title="Calories and Total Output per Week",
-        title_x=0.5,
-        xaxis_title="Week",
-        yaxis_title="Calories Burned",
-        width=1600
-    )
-
-    line.update_yaxes(title_text="Total Output", secondary_y=True)
-    line.update_yaxes(title_text="Calories Burned", secondary_y=False)
-    line.update_xaxes(title="Week")
-    return line
 
 def get_top_instructor(workout_df: pd.DataFrame) -> px.bar:
     fav_instructor_name = workout_df['Instructor Name'].mode()[0]
@@ -135,97 +96,131 @@ titleCard = dbc.Card([
         }
     )
 
-classLengthCard = dbc.Card([
-    dbc.CardBody([
-        html.Center(html.H1("Calories by Class Length", className='card-title')),
-        dcc.Graph(
-            id='class-length-by-calories-chart',
-            figure=get_cycling_class_length_chart(df)
-        )
-    ])
-],
-    color='info',
-    outline=True,
-    style={
-        "width": "55rem",
-        "margin-left": "45rem",
-        "margin-bottom": "1rem"
-    }
-)
+def create_class_length_card(workout_df: pd.DataFrame) -> dbc.Card:
+    return dbc.Card([
+        dbc.CardBody([
+            html.Center(html.H1("Calories by Class Length", className='card-title')),
+            html.Center(
+                dcc.DatePickerRange(
+                    id='date-range-picker',
+                    min_date_allowed=workout_df['Workout Timestamp'].min(),
+                    max_date_allowed=workout_df['Workout Timestamp'].max(),
+                    initial_visible_month=workout_df['Workout Timestamp'].min(),
+                    start_date=workout_df['Workout Timestamp'].min(),
+                    end_date=workout_df['Workout Timestamp'].max(),
+                    style={
+                        "margin-top": "1rem",
+                        "margin-bottom": "1rem"
+                    }
+                ),
+            ),
+            dcc.Graph(
+                id='class-length-by-calories-chart'        
+            )
+        ])
+    ],
+        color='info',
+        outline=True,
+        style={
+            "width": "50rem",
+            "margin-left": "10rem",
+            "margin-bottom": "1rem"
+        }
+    )
 
-instructorCard = dbc.Card([
-    dbc.CardBody([
-        html.Center(html.H1("Instructor by Fitness Discipline", className='card-title')),
-        dcc.Graph(
-            id='instructor-by-discipline-chart',
-            figure=get_instructors_by_discipline_chart(df),
-            style={
-                "margin-top": "1rem",
-                "margin-bottom": "1rem"
-            }
-        )
-    ])
-],
-    color='info',
-    outline=True,
-    style={
-        "margin-top": "1rem",
-        "margin-bottom": "1rem"
-    }
-)
+def create_instructor_card(workout_df: pd.DataFrame) -> dbc.Card:
+    return dbc.Card([
+        dbc.CardBody([
+            html.Center(html.H1("Instructor by Fitness Discipline", className='card-title')),
+            dcc.Graph(
+                id='instructor-by-discipline-chart',
+                figure=get_instructors_by_discipline_chart(workout_df),
+                style={
+                    "margin-top": "1rem",
+                    "margin-bottom": "1rem"
+                }
+            )
+        ])
+    ],
+        color='info',
+        outline=True,
+        style={
+            "margin-top": "1rem",
+            "margin-left": "1rem",
+            "margin-bottom": "1rem"
+        }
+    )
 
-fitnessDisciplineCard = dbc.Card([
-    dbc.CardBody([
-        html.Center(html.H1("Fitness Discipline Breakdown", className='card-title')),
-        html.P("This chart shows the percentage of time spent in minutes for each fitness discipline.", className='card-body'),
-        dcc.Graph(
-            id='fitness-discipline-by-calories-chart',
-            figure=get_fitness_discipline_chart(df)
-        )
-    ])
-],
-    color='info',
-    outline=True,
-    style={
-        "width": "55rem",
-        "margin-left": "1rem",
-        "margin-bottom": "1rem"
-    }
-)
+def create_discipline_card(workout_df: pd.DataFrame) -> dbc.Card:
+    return dbc.Card([
+        dbc.CardBody([
+            html.Center(html.H1("Fitness Discipline Breakdown", className='card-title')),
+            html.P("This chart shows the percentage of time spent in minutes for each fitness discipline.", className='card-body'),
+            dcc.Graph(
+                id='fitness-discipline-by-calories-chart',
+                figure=get_fitness_discipline_chart(workout_df)
+            )
+        ])
+    ],
+        color='info',
+        outline=True,
+        style={
+            "width": "50rem",
+            "margin-left": "1rem",
+            "margin-bottom": "1rem"
+        }
+    )
 
-weeklyCaloriesBurnedCard = dbc.Card([
-    dbc.CardBody([
-        html.Center(html.H1("Weekly Calorie and Output Breakdown", className='card-title')),
-        dcc.Graph(
-            id='weekly-calories-burned-chart',
-            figure=get_calories_burned_per_week_chart(df)
-        )
-    ])
-],
-    outline=True,
-    color='info',
-    style={
-        "width": "55rem",
-        "margin-left": "1rem",
-        "margin-bottom": "1rem"
-    }
-)
 
-topInstructorCard = dbc.Card([
-    dbc.CardBody([
-        html.Center(html.H1("Top Instructor", className='card-title')),
-        html.Center(html.H3(f"{fav_instructor} is the top instructor!")),
-        get_top_instructor(df)
-    ])
-],
-    outline=True,
-    color='info',
-    style={
-        "width": "55rem",
-        "margin-left": "45rem",
-        "margin-bottom": "1rem"
-    }
-)
+def create_top_instructor_card(workout_df: pd.DataFrame) -> dbc.Card:
+    fav_instructor_name = workout_df['Instructor Name'].mode()[0]
+    return dbc.Card([
+        dbc.CardBody([
+            html.Center(html.H1("Top Instructor", className='card-title')),
+            html.Center(html.H3(f"{fav_instructor_name} is the top instructor!")),
+            get_top_instructor(workout_df)
+        ])
+    ],
+        outline=True,
+        color='info',
+        style={
+            "width": "50rem",
+            "margin-left": "10rem",
+            "margin-bottom": "1rem"
+        }
+    )
+
+def create_calories_card(workout_df: pd.DataFrame) -> dbc.Card:
+    return dbc.Card([
+        dbc.CardBody([
+            html.Center(html.H1("Weekly Calorie and Output Breakdown", className='card-title')),
+            html.Center(
+                dcc.DatePickerRange(
+                    id='date-range-picker-2',
+                    min_date_allowed=workout_df['Workout Timestamp'].min(),
+                    max_date_allowed=workout_df['Workout Timestamp'].max(),
+                    initial_visible_month=workout_df['Workout Timestamp'].min(),
+                    start_date=workout_df['Workout Timestamp'].min(),
+                    end_date=workout_df['Workout Timestamp'].max(),
+                    style={
+                        "margin-top": "1rem",
+                        "margin-bottom": "1rem"
+                    }
+                )
+            ),
+            dcc.Graph(
+                id='weekly-calories-burned-chart'
+            )
+        ])
+    ],
+        outline=True,
+        color='info',
+        style={
+            "width": "50rem",
+            "margin-left": "1rem",
+            "margin-bottom": "1rem"
+        }
+    )
 
 
 app.layout = html.Div(
@@ -240,29 +235,111 @@ app.layout = html.Div(
         ),
         dbc.Row([
             dbc.Col([
-                    topInstructorCard,
-                    classLengthCard,
-                ]),
+                create_top_instructor_card(df),
+                create_class_length_card(df),
+            ]),
             dbc.Col([
-                fitnessDisciplineCard,
-                weeklyCaloriesBurnedCard
-                ]),
-            ],
-            justify="around",
-            style={
-                'margin-left': '0.5rem'
-            },
-        ),
+                create_calories_card(df),
+                create_discipline_card(df)
+            ])
+        ]),
         dbc.Row([
-            instructorCard,
-            ],
-            justify="center",
-            style={
-                'margin-left': '0.5rem'
-            },
-        ),
+            dbc.Col([
+                create_instructor_card(df)
+            ])
+        ])
     ]
 )
+
+
+
+@app.callback(
+    Output('class-length-by-calories-chart', 'figure'),
+    [Input('date-range-picker', 'start_date'),
+        Input('date-range-picker', 'end_date')]
+)
+def update_class_length_chart(start_date, end_date):
+    return get_cycling_class_length_chart(start_date, end_date)
+
+
+@app.callback(
+    Output('weekly-calories-burned-chart', 'figure'),
+    [   Input('date-range-picker-2', 'start_date'),
+        Input('date-range-picker-2', 'end_date')]
+)
+def update_weekly_calories_burned_chart(start_date, end_date):
+    dff = df.loc[(df['Workout Timestamp'] >= start_date) & (df['Workout Timestamp'] <= end_date)]
+    for tz in ['EST', 'EDT', '-04', '-05']:
+        dff['Workout Timestamp']= dff['Workout Timestamp'].str.replace(f"\({tz}\)", '')
+    dff['Workout Timestamp'] = pd.to_datetime(dff['Workout Timestamp'], format='%Y-%m-%d %H:%M', errors='coerce')
+    calories_df = dff.groupby(pd.Grouper(key='Workout Timestamp', freq='W'))['Calories Burned', 'Total Output'].agg('sum').reset_index()
+    line = make_subplots(specs=[[{"secondary_y": True}]])
+    line.add_trace(go.Scatter(x=calories_df['Workout Timestamp'], y=calories_df['Calories Burned'],
+                                marker=dict(size=10, color='MediumPurple'),
+                                name='Total Calories'
+                            ),
+                            secondary_y=False
+    )
+    line.add_trace(go.Scatter(x=calories_df['Workout Timestamp'], y=calories_df['Total Output'],
+                                marker=dict(size=10, color='MediumSeaGreen'),
+                                name='Total Output'
+                            ),
+                    secondary_y=True
+    )
+
+    line.update_layout(
+        title="Calories and Total Output per Week",
+        title_x=0.5,
+        xaxis_title="Week",
+        yaxis_title="Calories Burned",
+    )
+
+    line.update_yaxes(title_text="Total Output", secondary_y=True)
+    line.update_yaxes(title_text="Calories Burned", secondary_y=False)
+    line.update_xaxes(title="Week")
+    return line
+
+
+
+
+def get_calories_burned_per_week_chart(start_date: datetime, end_date: datetime) -> px.scatter:
+    workout_df = df.loc[(df['Workout Timestamp'] >= start_date) & (df['Workout Timestamp'] <= end_date)]
+    for tz in ['EST', 'EDT', '-04', '-05']:
+        workout_df['Workout Timestamp']= workout_df['Workout Timestamp'].str.replace(f"\({tz}\)", '')
+    workout_df['Workout Timestamp'] = pd.to_datetime(workout_df['Workout Timestamp'], format='%Y-%m-%d %H:%M', errors='coerce')
+    
+    workout_df['Calories Burned'] = workout_df['Calories Burned'].fillna(0)
+    workout_df['Total Output'] = workout_df['Total Output'].fillna(0)
+    calories_df = workout_df.groupby(pd.Grouper(key='Workout Timestamp', freq='W'))['Calories Burned'].agg('sum').reset_index()
+    total_output_df = workout_df.groupby(pd.Grouper(key='Workout Timestamp', freq='W'))['Total Output'].agg('sum').reset_index()
+    line = make_subplots(specs=[[{"secondary_y": True}]])
+    ts = calories_df['Workout Timestamp'].to_list()
+    calories = calories_df['Calories Burned'].to_list()
+    total_output = total_output_df['Total Output'].to_list()
+    line.add_trace(go.Scatter(x=ts, y=calories,
+                                marker=dict(size=10, color='MediumPurple'),
+                                name='Total Calories'
+                            ),
+                            secondary_y=False
+    )
+    line.add_trace(go.Scatter(x=ts, y=total_output,
+                                marker=dict(size=10, color='MediumSeaGreen'),
+                                name='Total Output'
+                            ),
+                    secondary_y=True
+    )
+
+    line.update_layout(
+        title="Calories and Total Output per Week",
+        title_x=0.5,
+        xaxis_title="Week",
+        yaxis_title="Calories Burned",
+    )
+
+    line.update_yaxes(title_text="Total Output", secondary_y=True)
+    line.update_yaxes(title_text="Calories Burned", secondary_y=False)
+    line.update_xaxes(title="Week")
+    return line
 
 if __name__ == "__main__":
     app.run_server(debug=True)
