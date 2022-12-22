@@ -22,9 +22,21 @@ logging.basicConfig(
     level=logging.DEBUG
 )
 
+from dotenv import load_dotenv
+load_dotenv()
+from pelotonapi import PeloDash
+from waiting import wait
+p = PeloDash(os.environ["USERNAME"], os.environ["PASSWORD"])
+r = p.get_workouts_csv()
+
 app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP], suppress_callback_exceptions=True)
 
-df = pd.read_csv("/home/jose/VSCodeProjects/PeloDash/workouts.csv")
+def is_something_ready():
+    if os.path.exists("workouts.csv"):
+        return True
+    return False
+wait(lambda: is_something_ready(), timeout_seconds=10, waiting_for="workouts.csv to be ready")
+df = pd.read_csv("workouts.csv")
 
 def get_fitness_discipline_chart(workout_df: pd.DataFrame) -> px.scatter:
     pie = px.pie(
