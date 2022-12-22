@@ -89,7 +89,7 @@ titleCard = dbc.Card([
         color='dark',
         inverse=True,
         style={
-            "width": "55rem",
+            "width": "40rem",
             "margin-left": "1rem",
             "margin-top": "1rem",
             "margin-bottom": "1rem"
@@ -122,8 +122,8 @@ def create_class_length_card(workout_df: pd.DataFrame) -> dbc.Card:
         color='info',
         outline=True,
         style={
-            "width": "50rem",
-            "margin-left": "10rem",
+            "width": "40rem",
+            "margin-left": "5rem",
             "margin-bottom": "1rem"
         }
     )
@@ -165,7 +165,7 @@ def create_discipline_card(workout_df: pd.DataFrame) -> dbc.Card:
         color='info',
         outline=True,
         style={
-            "width": "50rem",
+            "width": "40rem",
             "margin-left": "1rem",
             "margin-bottom": "1rem"
         }
@@ -184,8 +184,8 @@ def create_top_instructor_card(workout_df: pd.DataFrame) -> dbc.Card:
         outline=True,
         color='info',
         style={
-            "width": "50rem",
-            "margin-left": "10rem",
+            "width": "40rem",
+            "margin-left": "5rem",
             "margin-bottom": "1rem"
         }
     )
@@ -216,7 +216,7 @@ def create_calories_card(workout_df: pd.DataFrame) -> dbc.Card:
         outline=True,
         color='info',
         style={
-            "width": "50rem",
+            "width": "40rem",
             "margin-left": "1rem",
             "margin-bottom": "1rem"
         }
