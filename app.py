@@ -32,9 +32,7 @@ r = p.get_workouts_csv()
 app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP], suppress_callback_exceptions=True)
 
 def is_something_ready():
-    if os.path.exists("workouts.csv"):
-        return True
-    return False
+    return bool(os.path.exists("workouts.csv"))
 wait(lambda: is_something_ready(), timeout_seconds=10, waiting_for="workouts.csv to be ready")
 df = pd.read_csv("workouts.csv")
 
