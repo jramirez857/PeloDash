@@ -21,7 +21,7 @@ class PeloDash:
         self.login(username, password)
 
     def login(self, username, password):
-        auth_login_url = '%s/auth/login' % self.base_url
+        auth_login_url = f'{self.base_url}/auth/login'
         auth_payload = {
             'username_or_email': username,
             'password': password
